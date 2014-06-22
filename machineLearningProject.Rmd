@@ -1,0 +1,51 @@
+Machine Learning Project
+========================================================
+We preprocessed the data by removing NAs and unuseful predictors. This data is partitioned into training set and cross validation set. Around 20% of training set is randomly selected in order to reduce time taken to fit the model. 
+
+```{r}
+# load data
+setwd("G:/DataScience//Coursera//data")
+trainRawData <- read.csv("pml-training.csv",na.strings=c("NA",""))
+testingRawData <- read.csv("pml-testing.csv",na.strings=c("NA",""))
+# discard NAs
+NAs <- apply(trainRawData,2,function(x) {sum(is.na(x))}) 
+validData <- trainRawData[,which(NAs == 0)]
+
+testNAs <- apply(testingRawData,2,function(x) {sum(is.na(x))}) 
+validTestData <- testingRawData[,which(testNAs == 0)]
+
+library(e1071)
+library(randomForest)
+library(lattice)
+library(ggplot2)
+library(caret)
+library(kernlab)
+trainIndex <- createDataPartition(y = validData$classe, p=0.75,list=FALSE)
+trainData <- validData[trainIndex,]
+crossValidateData <- validData[-trainIndex, ]
+
+# discards unuseful predictors
+removeIndex <- grep("timestamp|X|user_name|new_window",names(trainData))
+trainData <- trainData[,-removeIndex]
+
+#select random observations
+trainInds <- sample(nrow(trainData), 3000)
+trainD <- trainData[trainInds,]
+```
+Random Forest model is fitted and evaluated using cross validation data set.
+```{r}
+modFit <- train(classe~.,data=trainD,method="rf",prox=TRUE)
+modFit$finalModel
+predictions <-predict(modFit, newdata=crossValidateData)
+confusionMatrix(predictions, crossValidateData$classe)
+```
+Using confusion matrix, we find that accuracy is 97.59%. Other statistics also look good to finalize the fitted model. Prediction algorithm is applied on the 20 test cases
+```{r}
+newPredictions <-predict(modFit, newdata=validTestData)
+```
+
+Predicted values are
+```{r}
+newPredictions
+```
+
